@@ -1,54 +1,82 @@
-// create a web server using express
-// create a router to handle different routes
-// create a route to handle comments
-// create a route to handle likes
-// create a route to handle dislikes
-// export the router
+// Create web server application with Express
+// Import express module
 const express = require('express');
-const router = express.Router();
-const comments = require('../data/comments');
+// Create express application
+const app = express();
+// Import path module
+const path = require('path');
+// Import body-parser module
+const bodyParser = require('body-parser');
 
-router.get('/', (req, res) => {
-    res.json(comments);
+// Import comments data
+const comments = require('./data/comments');
+
+// Import products data
+const products = require('./data/products');
+
+// Import products data
+const vehicles = require('./data/vehicles');
+
+// Import contacts data
+const contacts = require('./data/contacts');
+
+// Set up server port
+const port = process.env.PORT || 4001;
+
+// Use body-parser
+app.use(bodyParser.json());
+
+// Use static files in public folder
+app.use(express.static('public'));
+
+// Get all comments
+app.get('/comments', (req, res) => {
+  res.json(comments);
 });
 
-router.get('/:id', (req, res) => {
-    const id = req.params.id;
-    if (!id) return res.status(404).json({error: "No comment id provided"});
-    const comment = comments.find(comment => comment._id === Number(id));
-    if (!comment) return res.status(404).json({error: "No comment found with that id"});
-    res.json(comment);
+// Get a comment by id
+app.get('/comments/:id', (req, res) => {
+  const found = comments.some(comment => comment._id == req.params.id);
+
+  if (found) {
+    res.json(comments.filter(comment => comment._id == req.params.id));
+  } else {
+    res.status(400).json({ msg: `No comment with the id of ${req.params.id}` });
+  }
 });
 
-router.post('/', (req, res) => {
-    const body = req.body;
-    if (!body) return res.status(400).json({error: "No comment data provided"});
-    if (!body.comment) return res.status(400).json({error: "No comment text provided"});
-    const newComment = {
-        _id: comments.length + 1,
-        postId: 1,
-        name: "Anonymous",
-        comment: body.comment
-    };
-    comments.push(newComment);
-    res.json(comments);
+// Create a new comment
+app.post('/comments', (req, res) => {
+  const newComment = {
+    _id: comments.length + 1,
+    body: req.body.body,
+    postId: 1
+  };
+
+  if (!newComment.body) {
+    return res.status(400).json({ msg: 'Please include a body' });
+  }
+
+  comments.push(newComment);
+  res.json(comments);
 });
 
-router.put('/:id', (req, res) => {
-    const id = req.params.id;
-    if (!id) return res.status(400).json({error: "No comment id provided"});
-    const body = req.body;
-    if (!body) return res.status(400).json({error: "No comment data provided"});
-    if (!body.comment) return res.status(400).json({error: "No comment text provided"});
-    const comment = comments.find(comment => comment._id === Number(id));
-    if (!comment) return res.status(404).json({error: "No comment found with that id"});
-    comment.comment = body.comment;
-    res.json(comment);
+// Update a comment
+app.put('/comments/:id', (req, res) => {
+  const found = comments.some(comment => comment._id == req.params.id);
+
+  if (found) {
+    const updateComment = req.body;
+    comments.forEach(comment => {
+      if (comment._id == req.params.id) {
+        comment.body = updateComment.body ? updateComment.body : comment.body;
+        res.json({ msg: 'Comment updated', comment });
+      }
+    });
+  } else {
+    res.status(400).json({ msg: `No comment with the id of ${req.params.id}` });
+  }
 });
 
-router.delete('/:id', (req, res) => {
-    const id = req.params.id;
-    if (!id) return res.status(400).json({error: "No comment id provided"});
-    const comment = comments.find(comment => comment._id === Number(id));
-    if (!comment) return res.status(404).json({error: "No comment found with that id"});
-    const index = comments
+// Delete a comment
+app.delete('/comments/:id', (req, res) => {
